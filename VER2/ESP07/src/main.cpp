@@ -4,10 +4,15 @@
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
 
-SoftwareSerial UART2(13, 15); // RX, TX. UART2 for ESP07
-
-// led for signalizing
+// Config
+#define RX2 13
+#define TX2 15
 #define LEDPIN 2
+#define BAUD 9600
+#define SIZE_OF_MSG 256
+#define NUMBER_OF_OPERATOR 5
+#define OPERATOR_LENGTH 20
+#define LENGTH_OF_TOPIC 30
 
 // ssid and password wifi
 const char *ssid = "Tran Ba Dat";
@@ -20,10 +25,10 @@ const int mqtt_port = 1883;
 // const int mqtt_port = 1883;
 WiFiClient espClient;
 PubSubClient client(espClient);
-#define NumOfOperator 5
-const char Operator[NumOfOperator][20] = {"RegistrationAck", "Registration", "keepAlive", "sensorData", "actuatorData"};
-char Topic[NumOfOperator][30] = {"farm/1/register", "farm/1/register", "farm/1/alive/1", "farm/1/1", "farm/1/1"};
+const char operatorList[NUMBER_OF_OPERATOR][OPERATOR_LENGTH] = {"registerAck", "register", "keepAlive", "sensorData", "actuatorData"};
+char Topic[NUMBER_OF_OPERATOR][LENGTH_OF_TOPIC] = {"farm/1/register", "farm/1/register", "farm/1/alive/.", "farm/1/.", "farm/1/."};
 
+SoftwareSerial UART2(RX2, TX2); // UART2 for ESP07
 // function prototype
 void ledDebug();
 void reconnect();
@@ -33,15 +38,15 @@ void PublishData();
 void setup()
 {
   pinMode(LEDPIN, OUTPUT); // led for debug
-  Serial.begin(9600);
-  UART2.begin(9600);
+  Serial.begin(BAUD);
+  UART2.begin(BAUD);
 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
   {
     ledDebug();
   }
-  // Serial.println(WiFi.softAPmacAddress());
+  Serial.println(WiFi.softAPmacAddress());
 
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
@@ -54,18 +59,6 @@ void loop()
 }
 
 /*******************************************************************************/
-// led blink to debug
-void ledDebug()
-{
-  digitalWrite(LEDPIN, LOW);
-  delay(100);
-  digitalWrite(LEDPIN, HIGH);
-  delay(100);
-  digitalWrite(LEDPIN, LOW);
-  delay(100);
-  digitalWrite(LEDPIN, HIGH);
-  delay(100);
-}
 
 // callback function when MQTT has new data, it will be sent to ATMEGA128 by Serial(UART1)
 void callback(char *topic, byte *payload, unsigned int length)
@@ -98,7 +91,7 @@ void reconnect()
         /* If connection to MQTT server is successful, turn 2 on */
         digitalWrite(LEDPIN, LOW);
         // Resubscribe to topic
-        for (int i = 0; i < NumOfOperator; i++)
+        for (int i = 0; i < NUMBER_OF_OPERATOR; i++)
         {
           client.subscribe((const char *)Topic[i]);
         }
@@ -120,40 +113,57 @@ void PublishData()
 {
   if (UART2.available())
   {
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<SIZE_OF_MSG> doc;
     DeserializationError err = deserializeJson(doc, UART2.readString());
 
     if (err == DeserializationError::Ok)
     {
-      // read sensorid to config topics. operator = "RegistrationAck"
-      if (doc["operator"] == "RegistrationAck")
+      ledDebug();
+      // add mac address into message "register"
+      if (doc["operator"] == "register")
+      {
+        doc["info"]["macAddress"] = WiFi.softAPmacAddress();
+      }
+
+      // take id from message "registerAck"
+      if (doc["operator"] == "registerAck")
       {
         int SensorId = doc["info"]["id"];
         sprintf(Topic[2], "farm/1/alive/%d", SensorId);
         sprintf(Topic[3], "farm/1/%d", SensorId);
         sprintf(Topic[4], "farm/1/%d", SensorId);
       }
-      else
-      {
-        // publish data to MQTT with right topic
-        for (int i = 1; i < NumOfOperator; i++)
-        {
 
-          if (doc["operator"] == Operator[i])
-          {
-            char msg[512];
-            serializeJson(doc, msg);
-            client.publish(Topic[i], msg);
-            ledDebug();
-          }
+      // publish data to MQTT with right topic
+      for (int i = 1; i < NUMBER_OF_OPERATOR; i++)
+      {
+
+        if (doc["operator"] == operatorList[i])
+        {
+          char msg[SIZE_OF_MSG];
+          serializeJson(doc, msg);
+          client.publish(Topic[i], msg);
         }
       }
     }
-    else
-    {
-      // Flush all bytes in the "link" serial port buffer
-      while (UART2.available() > 0)
-        UART2.read();
-    }
   }
+  else
+  {
+    // Flush all bytes in the "link" serial port buffer
+    while (UART2.available() > 0)
+      UART2.read();
+  }
+}
+
+// led blink to debug
+void ledDebug()
+{
+  digitalWrite(LEDPIN, LOW);
+  delay(100);
+  digitalWrite(LEDPIN, HIGH);
+  delay(100);
+  digitalWrite(LEDPIN, LOW);
+  delay(100);
+  digitalWrite(LEDPIN, HIGH);
+  delay(100);
 }
