@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
 #include <Timer.h>
+#include "control.h"
 
 // SHT21
 #include "SHT2x.h"
@@ -38,7 +39,7 @@ unsigned char hexReadCo2[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 uint8_t hexZeroPoint[9] = {0xff, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78};
 int Co2 = 0;
 
-SoftwareSerial UART1(PIN_PD2, PIN_PD3); // RX, TX. UART1 for MAX485
+// SoftwareSerial UART1(PIN_PD2, PIN_PD3); // RX, TX. UART1 for MAX485
 SoftwareSerial UART2(PIN_PE2, PIN_PE3); // RX, TX. UART2 for ESP07
 SoftwareSerial UART3(PIN_PE4, PIN_PE5); // RX, TX. UART3 for MHZ16
 
@@ -57,6 +58,10 @@ void setup()
 {
   // put your setup code here, to run once:
   pinMode(LEDPIN, OUTPUT);
+  pinMode(PIN_PA3, OUTPUT);
+  pinMode(PIN_PA4, OUTPUT);
+  pinMode(PIN_PA5, OUTPUT);
+  pinMode(PIN_PA6, OUTPUT);
   Serial.begin(9600);
   UART1.begin(9600);
   UART2.begin(9600);
@@ -136,6 +141,7 @@ void loop()
       case 4:
         // "actuatorData"
         sendDataAct();
+        // run_multispeed(5);
         break;
 
       default:
