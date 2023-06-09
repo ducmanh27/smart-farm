@@ -21,7 +21,7 @@
 #include <SoftwareSerial.h>
 
 SoftwareSerial UART1(PIN_PD2, PIN_PD3); // RX, TX. UART1 for MAX485
-static unsigned char Address = 0x01;
+#define  DEVICE_ADDRESS 0x01
 unsigned char d1[30];
 
 void FORWARD_RUNNING();
@@ -30,6 +30,7 @@ void REVERSE_RUNNING();
 void SET_FREQUENCY();
 void MAXFREQUENCY_FORWARD_RUNNING();
 void MAXFREQUENCY_REVERSE_RUNNING();
+
 unsigned int crc_chk(unsigned char *data, unsigned char length)
 {
   int j;
@@ -53,7 +54,7 @@ unsigned int crc_chk(unsigned char *data, unsigned char length)
 }
 void send485(unsigned char device, unsigned char adress_low, unsigned int value)
 {
-  unsigned char i = 0;
+  unsigned int i = 0;
   unsigned int crc = 0;
   // Serial.println(adress,HEX);
   // Serial.println(value);
@@ -89,34 +90,34 @@ void send485(unsigned char device, unsigned char adress_low, unsigned int value)
     }
   }
 
-  for (char i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++)
   {
     UART1.write(d1[i]);
   }
 }
 void FORWARD_RUNNING()
 {
-  send485(Address, 0x00, 0x0001);
+  send485(DEVICE_ADDRESS, 0x00, 0x0001);
 }
 void REVERSE_RUNNING()
 {
-  send485(Address, 0x00, 0x0002);
+  send485(DEVICE_ADDRESS, 0x00, 0x0002);
 }
 void STOP()
 {
-  send485(Address, 0x00, 0x0005); // 01 06 20 00 00 05
+  send485(DEVICE_ADDRESS, 0x00, 0x0005); // 01 06 20 00 00 05
 }
 void SET_FREQUENCY()
 {
-  send485(Address, 0x01, 0x0032); // 32 H =50 D
+  send485(DEVICE_ADDRESS, 0x01, 0x0032); // 32 H =50 D
 }
 void MAXFREQUENCY_FORWARD_RUNNING()
 {
-  send485(Address, 0x05, 0x0032);
+  send485(DEVICE_ADDRESS, 0x05, 0x0032);
 }
 void MAXFREQUENCY_REVERSE_RUNNING()
 {
-  send485(Address, 0x06, 0x0032);
+  send485(DEVICE_ADDRESS, 0x06, 0x0032);
 }
 
 int speed = 0; // percent
