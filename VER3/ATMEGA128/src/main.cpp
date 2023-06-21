@@ -21,17 +21,17 @@ RTC_DS3231 rtc;
 #define T_READ_MHZ16 30 * 1000
 #define T_MHZ16_CALIBRATION (unsigned long)30 * 24 * 60 * 60 * 1000 // 1 month
 #define T_READ_MOTOR 7 * 1000
-#define T_SEND_DATA 30 * 1000
+#define T_SEND_DATA 10 * 1000
 #define T_KEEP_ALIVE (unsigned long)30 * 60 * 1000
-#define T_RE_REGISTER 4000
 
 // led for debuging
 #define LEDPIN PIN_PB7
 #define SIZE_OF_JSON 256
-#define NUM_OF_OPERATOR 5
-const char operatorList[NUM_OF_OPERATOR][20] = {"registerAck", "register", "keepAlive", "sensorData", "actuatorData"};
+#define NUM_OF_OPERATOR 6
+const char operatorList[NUM_OF_OPERATOR][20] = {"registerAck", "register", "keepAlive", "sensorData", "actuatorData", "control"};
 int SensorId = 0;
 char macAddress[18];
+int speed = 0; // percent
 Timer t;
 
 // hex data for MHZ16 read data ad calibration
@@ -58,10 +58,11 @@ void setup()
 {
   // put your setup code here, to run once:
   pinMode(LEDPIN, OUTPUT);
-  pinMode(PIN_PA3, OUTPUT);
-  pinMode(PIN_PA4, OUTPUT);
-  pinMode(PIN_PA5, OUTPUT);
-  pinMode(PIN_PA6, OUTPUT);
+  pinInit();
+  // pinMode(PIN_PA3, OUTPUT);
+  // pinMode(PIN_PA4, OUTPUT);
+  // pinMode(PIN_PA5, OUTPUT);
+  // pinMode(PIN_PA6, OUTPUT);
   Serial.begin(9600);
   UART1.begin(9600);
   UART2.begin(9600);
@@ -92,6 +93,7 @@ void setup()
 /***************************************__LOOP__***************************************/
 void loop()
 {
+
   t.update();
   // Processing data received from ESP07
   if (Serial.available())
@@ -118,19 +120,28 @@ void loop()
       {
       case 0:
         // "registerAck"
-        if (doc["info"]["status"] == 1)
+        if ((macAddress == doc["info"]["macAddress"]))
         {
-          SensorId = doc["info"]["id"];
-          strcpy(macAddress, doc["info"]["macAddress"]);
-          serializeJson(doc, UART2);
-        }
-        else
-        {
-          Registration();
+          if ((doc["info"]["status"] == 1))
+          {
+            SensorId = doc["info"]["id"];
+            serializeJson(doc, UART2);
+          }
+          else
+          {
+            if (SensorId == 0)
+            {
+              Registration();
+            }
+          }
         }
         break;
       case 1:
         // "register"
+        if (doc["info"]["status"] == 1)
+        {
+          strcpy(macAddress, doc["info"]["macAddress"]);
+        }
         break;
       case 2:
         // "keepAlive"
@@ -141,11 +152,14 @@ void loop()
       case 4:
         // "actuatorData"
         sendDataAct();
-        // run_multispeed(5);
         break;
-
-      default:
+      case 5:
+        // "control"
+        int level = doc["info"]["level"];
+        run_multispeed(level);
         break;
+        // default:
+        //   break;
       }
     }
     else
@@ -162,7 +176,6 @@ void loop()
 // register MAC Address: EA:DB:84:AA:4E:CE
 void Registration()
 {
-  delay(T_RE_REGISTER);
   if (!UART2.available())
   {
     StaticJsonDocument<SIZE_OF_JSON> doc;

@@ -10,13 +10,15 @@
 #define LEDPIN 2
 #define BAUD 9600
 #define SIZE_OF_MSG 256
-#define NUMBER_OF_OPERATOR 5
+#define NUMBER_OF_OPERATOR 6
 #define OPERATOR_LENGTH 20
 #define LENGTH_OF_TOPIC 30
 
 // ssid and password wifi
 const char *ssid = "Tran Ba Dat";
 const char *password = "123456789";
+// const char *ssid = "BKEM";
+// const char *password = "12345678";
 
 // info you mqtt broker
 const char *mqtt_server = "broker.emqx.io";
@@ -25,8 +27,8 @@ const int mqtt_port = 1883;
 // const int mqtt_port = 1883;
 WiFiClient espClient;
 PubSubClient client(espClient);
-const char operatorList[NUMBER_OF_OPERATOR][OPERATOR_LENGTH] = {"registerAck", "register", "keepAlive", "sensorData", "actuatorData"};
-char Topic[NUMBER_OF_OPERATOR][LENGTH_OF_TOPIC] = {"farm/1/register", "farm/1/register", "farm/1/alive/.", "farm/1/.", "farm/1/."};
+const char operatorList[NUMBER_OF_OPERATOR][OPERATOR_LENGTH] = {"registerAck", "register", "keepAlive", "sensorData", "actuatorData", "control"};
+char Topic[NUMBER_OF_OPERATOR][LENGTH_OF_TOPIC] = {"farm/1/register", "farm/1/register", "farm/1/alive/.", "farm/1/.", "farm/1/.", "farm/1/control"};
 
 SoftwareSerial UART2(RX2, TX2); // UART2 for ESP07
 // function prototype
@@ -123,6 +125,9 @@ void PublishData()
       if (doc["operator"] == "register")
       {
         doc["info"]["macAddress"] = WiFi.softAPmacAddress();
+        doc["info"]["status"] = 1;
+        serializeJson(doc, Serial);
+        doc["info"]["status"] = 0;
       }
 
       // take id from message "registerAck"

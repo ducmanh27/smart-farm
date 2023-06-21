@@ -1,8 +1,8 @@
 /*
-    Before using modbus protocol, VFD should be configured 
+    Before using modbus protocol, VFD should be configured
     P00.00 -> 2
     P00.01 -> 2 run by communication
-    P00.03 -> 50.00 (Hz) Max Frequency 
+    P00.03 -> 50.00 (Hz) Max Frequency
     P00.04 -> 50.00 (Hz)
     P00.05 -> 00.00 (Hz)
     P00.06 -> 8 Function: MODBUS communication setting. The frequency is set by MODBUS communication
@@ -21,7 +21,7 @@
 #include <SoftwareSerial.h>
 
 SoftwareSerial UART1(PIN_PD2, PIN_PD3); // RX, TX. UART1 for MAX485
-#define  DEVICE_ADDRESS 0x01
+#define DEVICE_ADDRESS 0x01
 unsigned char d1[30];
 
 void FORWARD_RUNNING();
@@ -30,6 +30,16 @@ void REVERSE_RUNNING();
 void SET_FREQUENCY();
 void MAXFREQUENCY_FORWARD_RUNNING();
 void MAXFREQUENCY_REVERSE_RUNNING();
+void pinInit();
+
+void pinInit()
+{
+  for (int i = 41; i >= 38; i--)
+  {
+    digitalWrite(i, LOW);
+    pinMode(i, OUTPUT);
+  }
+}
 
 unsigned int crc_chk(unsigned char *data, unsigned char length)
 {
@@ -120,42 +130,10 @@ void MAXFREQUENCY_REVERSE_RUNNING()
   send485(DEVICE_ADDRESS, 0x06, 0x0032);
 }
 
-int speed = 0; // percent
-int run_multispeed(int n);
-void speed_up()
-{
-  if (speed >= 0 and speed < 15)
-  {
-    speed++;
-    run_multispeed(speed);
-  }
-  else
-  {
-    speed = 0;
-    run_multispeed(speed);
-  }
-    
-  
-}
-void speed_down()
-{
-  if (speed > 0)
-  {
-    speed--;
-    run_multispeed(speed);
-  }
-  else{
-    speed = 15;
-    run_multispeed(speed);
-  }
-  
-}
-
 int run_multispeed(int n) // n = [0,15]
 {
   int binaryNum[4] = {0, 0, 0, 0};
   int i = 0;
-  speed = n;
   while (n > 0)
   {
     binaryNum[i] = n % 2;
@@ -168,5 +146,5 @@ int run_multispeed(int n) // n = [0,15]
     digitalWrite(i, !binaryNum[k]);
     k++;
   }
-  return speed;
+  return n;
 }
